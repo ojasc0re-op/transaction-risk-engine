@@ -1,0 +1,70 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: fraud-detection-app
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      - SPRING_PROFILES_ACTIVE=default
+      - DB_URL=jdbc:postgresql://postgres:5432/fraud_detection
+      - DB_USERNAME=fraud_user
+      - DB_PASSWORD=fraud_secret_pass
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - JWT_SECRET=YourSuperSecretKeyForJWTSigningInProductionMustBe256BitsLong!
+      - JWT_EXPIRATION_MS=86400000
+      - SUSPICIOUS_IPS=192.168.100.1,10.0.0.1
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - fraud-net
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: fraud-detection-postgres
+    restart: unless-stopped
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: fraud_detection
+      POSTGRES_USER: fraud_user
+      POSTGRES_PASSWORD: fraud_secret_pass
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U fraud_user -d fraud_detection"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - fraud-net
+
+  redis:
+    image: redis:7-alpine
+    container_name: fraud-detection-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    networks:
+      - fraud-net
+
+volumes:
+  pgdata:
+  redisdata:
+
+networks:
+  fraud-net:
+    driver: bridge

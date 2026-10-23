@@ -1,0 +1,1006 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CyberShield 3D — Transaction Risk & Fraud Detection Platform</title>
+  <script src="https://www.gstatic.com/antigravity/web/dev/tailwindcss.min.js"></script>
+  <style>
+    @keyframes pulse-glow {
+      0%, 100% { opacity: 0.3; transform: scale(1); }
+      50% { opacity: 0.8; transform: scale(1.08); }
+    }
+    @keyframes scanline {
+      0% { transform: translateY(-100%); }
+      100% { transform: translateY(1000%); }
+    }
+    .glow-emerald { filter: drop-shadow(0 0 12px rgba(16, 185, 129, 0.6)); }
+    .glow-rose { filter: drop-shadow(0 0 16px rgba(244, 63, 94, 0.7)); }
+    .glow-amber { filter: drop-shadow(0 0 12px rgba(245, 158, 11, 0.6)); }
+    .glow-blue { filter: drop-shadow(0 0 14px rgba(59, 130, 246, 0.6)); }
+    .glass-card {
+      background: rgba(15, 23, 42, 0.75);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid rgba(51, 65, 85, 0.6);
+    }
+    .glass-card-bright {
+      background: rgba(30, 41, 59, 0.85);
+      backdrop-filter: blur(16px);
+      border: 1px solid rgba(71, 85, 105, 0.7);
+    }
+    canvas#globe-canvas {
+      cursor: grab;
+    }
+    canvas#globe-canvas:active {
+      cursor: grabbing;
+    }
+  </style>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen overflow-x-hidden font-sans selection:bg-cyan-500 selection:text-white">
+
+  <!-- Header / Navigation -->
+  <header class="border-b border-slate-800/80 bg-slate-950/80 backdrop-blur sticky top-0 z-50">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+      <div class="flex items-center space-x-3">
+        <div class="w-10 h-10 rounded-lg bg-gradient-to-tr from-cyan-500 via-blue-600 to-indigo-600 flex items-center justify-center shadow-lg shadow-cyan-500/20">
+          <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
+          </svg>
+        </div>
+        <div>
+          <h1 class="text-base font-bold tracking-tight bg-gradient-to-r from-white via-slate-200 to-cyan-400 bg-clip-text text-transparent">
+            CYBERSHIELD 3D
+          </h1>
+          <p class="text-xs text-slate-400">Transaction Risk & Fraud Detection Platform</p>
+        </div>
+      </div>
+
+      <!-- Live Connection Status & Controls -->
+      <div class="flex items-center space-x-3">
+        <div id="backend-status-pill" class="flex items-center space-x-2 px-3 py-1 rounded-full bg-emerald-950/80 border border-emerald-500/40 text-xs text-emerald-300 font-mono">
+          <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+          <span id="backend-status-text">Backend Online (Port 8080)</span>
+        </div>
+        <button id="toggle-source-btn" onclick="toggleEngineMode()" class="px-3 py-1 text-xs font-medium rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 transition-colors">
+          Mode: <span id="current-mode-label" class="text-cyan-400 font-semibold">Live Backend</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Container -->
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+
+    <!-- Top Metric Counters -->
+    <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+      <div class="glass-card rounded-xl p-4 relative overflow-hidden">
+        <div class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Total Evaluated</div>
+        <div id="metric-total" class="text-2xl font-extrabold text-white mt-1 font-mono">1,248</div>
+        <div class="text-[11px] text-cyan-400 mt-1 flex items-center">
+          <span class="inline-block w-1.5 h-1.5 rounded-full bg-cyan-400 mr-1.5"></span> Real-time sliding window
+        </div>
+      </div>
+      <div class="glass-card rounded-xl p-4 relative overflow-hidden">
+        <div class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Approved (Low/Med)</div>
+        <div id="metric-approved" class="text-2xl font-extrabold text-emerald-400 mt-1 font-mono">1,182</div>
+        <div class="text-[11px] text-emerald-500 mt-1">94.7% auto-approval rate</div>
+      </div>
+      <div class="glass-card rounded-xl p-4 relative overflow-hidden">
+        <div class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Under Review (High)</div>
+        <div id="metric-review" class="text-2xl font-extrabold text-amber-400 mt-1 font-mono">48</div>
+        <div class="text-[11px] text-amber-400/80 mt-1">Queued for analyst triage</div>
+      </div>
+      <div class="glass-card rounded-xl p-4 relative overflow-hidden">
+        <div class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Blocked (Critical)</div>
+        <div id="metric-blocked" class="text-2xl font-extrabold text-rose-400 mt-1 font-mono">18</div>
+        <div class="text-[11px] text-rose-400/80 mt-1">High-confidence fraud stopped</div>
+      </div>
+    </div>
+
+    <!-- Central Interactive 3D Section -->
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+      <!-- Left / Center: 3D Interactive Globe & Radar (7 Cols) -->
+      <div class="lg:col-span-7 glass-card rounded-2xl p-5 relative flex flex-col items-center justify-center overflow-hidden border border-cyan-500/20 shadow-2xl shadow-cyan-950/20">
+        
+        <!-- Header Overlay on 3D View -->
+        <div class="w-full flex items-center justify-between z-10 mb-2">
+          <div>
+            <h2 class="text-sm font-semibold tracking-wide text-slate-200 flex items-center gap-2">
+              <span class="w-2 h-2 rounded-full bg-cyan-400 animate-ping"></span>
+              3D GLOBAL TRANSACTION RADAR
+            </h2>
+            <p class="text-xs text-slate-400">Click and drag to rotate the 3D globe. Particle arcs visualize live transaction leaps.</p>
+          </div>
+          <div class="flex gap-1.5 text-[11px] font-mono">
+            <span class="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">LOW</span>
+            <span class="px-2 py-0.5 rounded bg-amber-500/20 text-amber-400 border border-amber-500/30">MED</span>
+            <span class="px-2 py-0.5 rounded bg-orange-500/20 text-orange-400 border border-orange-500/30">HIGH</span>
+            <span class="px-2 py-0.5 rounded bg-rose-500/20 text-rose-400 border border-rose-500/30">CRIT</span>
+          </div>
+        </div>
+
+        <!-- 3D Canvas -->
+        <div class="relative w-full h-[420px] flex items-center justify-center">
+          <canvas id="globe-canvas" width="600" height="420" class="max-w-full max-h-full rounded-xl"></canvas>
+          
+          <!-- Globe Controls Overlay -->
+          <div class="absolute bottom-3 left-3 bg-slate-900/80 backdrop-blur px-3 py-1.5 rounded-lg border border-slate-700/60 text-[11px] text-slate-400 space-x-2 flex items-center">
+            <button onclick="resetGlobeView()" class="hover:text-cyan-400">⟲ Reset Camera</button>
+            <span>•</span>
+            <button onclick="toggleAutoRotate()" id="auto-rotate-btn" class="hover:text-cyan-400">⏸ Pause Rotation</button>
+          </div>
+          
+          <!-- Recent Pulse Alert -->
+          <div id="globe-alert-badge" class="absolute top-4 right-4 hidden bg-slate-900/90 border border-slate-700 px-3 py-1.5 rounded-lg shadow-xl text-xs font-mono">
+            <div id="globe-alert-title" class="font-bold text-cyan-400">TXN DETECTED</div>
+            <div id="globe-alert-desc" class="text-slate-300 text-[11px]">NYC → LA (3936 km)</div>
+          </div>
+        </div>
+
+        <!-- Quick Scenario Injection Buttons -->
+        <div class="w-full mt-4 pt-3 border-t border-slate-800/80">
+          <div class="text-xs font-semibold text-slate-400 mb-2">Simulate Fraud Scenarios:</div>
+          <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
+            <button onclick="injectPreset('low')" class="px-3 py-2 text-xs font-semibold rounded-lg bg-emerald-950/50 hover:bg-emerald-900/50 text-emerald-300 border border-emerald-700/50 transition-all flex flex-col items-center">
+              <span>🟢 Normal</span>
+              <span class="text-[10px] text-emerald-400/70">$45 • Low Risk</span>
+            </button>
+            <button onclick="injectPreset('medium')" class="px-3 py-2 text-xs font-semibold rounded-lg bg-amber-950/50 hover:bg-amber-900/50 text-amber-300 border border-amber-700/50 transition-all flex flex-col items-center">
+              <span>🟡 New Device</span>
+              <span class="text-[10px] text-amber-400/70">$280 • Unseen ID</span>
+            </button>
+            <button onclick="injectPreset('high')" class="px-3 py-2 text-xs font-semibold rounded-lg bg-orange-950/50 hover:bg-orange-900/50 text-orange-300 border border-orange-700/50 transition-all flex flex-col items-center">
+              <span>🟠 Crypto Leap</span>
+              <span class="text-[10px] text-orange-400/70">$2.5k • 3.9k km jump</span>
+            </button>
+            <button onclick="injectPreset('critical')" class="px-3 py-2 text-xs font-semibold rounded-lg bg-rose-950/50 hover:bg-rose-900/50 text-rose-300 border border-rose-700/50 transition-all flex flex-col items-center">
+              <span>🔴 Card Attack</span>
+              <span class="text-[10px] text-rose-400/70">$9.5k • Casino • Flagged IP</span>
+            </button>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Right: Live Risk Engine Inspector & Gauge (5 Cols) -->
+      <div class="lg:col-span-5 flex flex-col space-y-4">
+        
+        <!-- Risk Assessment Outcome Card -->
+        <div id="risk-display-card" class="glass-card rounded-2xl p-5 border border-slate-700 transition-all">
+          <div class="flex items-center justify-between mb-3">
+            <span class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Latest Evaluation</span>
+            <span id="risk-level-badge" class="px-2.5 py-0.5 rounded-full text-xs font-bold font-mono bg-emerald-500/20 text-emerald-400 border border-emerald-500/40">
+              LOW RISK
+            </span>
+          </div>
+
+          <!-- Gauge and Decision -->
+          <div class="flex items-center space-x-5 py-2">
+            <!-- Circular Gauge -->
+            <div class="relative w-28 h-28 flex items-center justify-center shrink-0">
+              <svg class="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
+                <circle cx="50" cy="50" r="40" stroke="currentColor" stroke-width="8" class="text-slate-800" fill="transparent"/>
+                <circle id="gauge-circle" cx="50" cy="50" r="40" stroke="currentColor" stroke-width="8" class="text-emerald-400 transition-all duration-700" fill="transparent" stroke-dasharray="251.2" stroke-dashoffset="251.2" stroke-linecap="round"/>
+              </svg>
+              <div class="absolute inset-0 flex flex-col items-center justify-center">
+                <span id="score-text" class="text-3xl font-extrabold font-mono text-white">0</span>
+                <span class="text-[10px] text-slate-400 uppercase">/ 100</span>
+              </div>
+            </div>
+
+            <!-- Decision Box -->
+            <div class="flex-1 space-y-1">
+              <div class="text-xs text-slate-400">Automated Decision:</div>
+              <div id="decision-text" class="text-xl font-bold font-mono text-emerald-400 tracking-wide">
+                APPROVED
+              </div>
+              <div id="decision-desc" class="text-xs text-slate-400">
+                Transaction accepted within safety tolerances.
+              </div>
+            </div>
+          </div>
+
+          <!-- Triggered Rules Checklist -->
+          <div class="mt-4 pt-4 border-t border-slate-800/80">
+            <div class="text-xs font-semibold text-slate-300 mb-2 flex items-center justify-between">
+              <span>Triggered Fraud Rules (<span id="rule-count">0</span>)</span>
+              <span class="text-[11px] text-slate-500 font-mono">Normalized 0-100</span>
+            </div>
+            <div id="rules-container" class="space-y-1.5 max-h-44 overflow-y-auto pr-1 text-xs">
+              <div class="text-slate-500 italic py-2 text-center text-xs">No fraud rules triggered. Clean transaction.</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Transaction Parameter Form -->
+        <div class="glass-card rounded-2xl p-5 border border-slate-800 flex-1">
+          <div class="text-xs font-semibold text-slate-300 uppercase tracking-wider mb-3">Custom Evaluation Request</div>
+          <form id="txn-form" onsubmit="submitCustomTransaction(event)" class="space-y-3">
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label class="block text-[11px] text-slate-400 mb-1">Amount ($)</label>
+                <input type="number" step="0.01" id="input-amount" value="120.00" required class="w-full px-2.5 py-1.5 bg-slate-900 border border-slate-700 rounded-lg text-xs text-white focus:border-cyan-500 focus:outline-none font-mono" />
+              </div>
+              <div>
+                <label class="block text-[11px] text-slate-400 mb-1">Merchant</label>
+                <select id="input-merchant" class="w-full px-2.5 py-1.5 bg-slate-900 border border-slate-700 rounded-lg text-xs text-white focus:border-cyan-500 focus:outline-none">
+                  <option value="Amazon">Amazon (Low Risk)</option>
+                  <option value="Walmart">Walmart (Low Risk)</option>
+                  <option value="TechStore Pro">TechStore Pro (Med Risk)</option>
+                  <option value="Crypto Exchange XYZ">Crypto Exchange XYZ (High Risk)</option>
+                  <option value="Online Casino Royal">Online Casino Royal (High Risk)</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label class="block text-[11px] text-slate-400 mb-1">Location / Coordinates</label>
+                <select id="input-location" class="w-full px-2.5 py-1.5 bg-slate-900 border border-slate-700 rounded-lg text-xs text-white focus:border-cyan-500 focus:outline-none">
+                  <option value="NYC">New York, NY (Baseline)</option>
+                  <option value="LA">Los Angeles, CA (+3900km Leap)</option>
+                  <option value="LON">London, UK (International)</option>
+                  <option value="TOK">Tokyo, Japan (Far Trans-Pacific)</option>
+                </select>
+              </div>
+              <div>
+                <label class="block text-[11px] text-slate-400 mb-1">Device ID</label>
+                <select id="input-device" class="w-full px-2.5 py-1.5 bg-slate-900 border border-slate-700 rounded-lg text-xs text-white focus:border-cyan-500 focus:outline-none">
+                  <option value="device-known-001">device-known-001 (Known/Trusted)</option>
+                  <option value="device-new-999">device-new-999 (Unseen Device)</option>
+                </select>
+              </div>
+            </div>
+
+            <div>
+              <label class="block text-[11px] text-slate-400 mb-1">IP Address</label>
+              <select id="input-ip" class="w-full px-2.5 py-1.5 bg-slate-900 border border-slate-700 rounded-lg text-xs text-white focus:border-cyan-500 focus:outline-none">
+                <option value="192.168.1.15">192.168.1.15 (Clean residential)</option>
+                <option value="192.168.100.1">192.168.100.1 (Flagged Suspicious IP)</option>
+                <option value="10.0.0.1">10.0.0.1 (Flagged Proxy/VPN)</option>
+              </select>
+            </div>
+
+            <button type="submit" class="w-full py-2 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-semibold text-xs rounded-lg shadow-lg shadow-cyan-500/25 transition-all flex items-center justify-center space-x-2">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+              </svg>
+              <span>EVALUATE TRANSACTION RISK</span>
+            </button>
+          </form>
+        </div>
+
+      </div>
+
+    </div>
+
+    <!-- Live Transaction History Stream Table -->
+    <div class="glass-card rounded-2xl p-5 border border-slate-800">
+      <div class="flex items-center justify-between mb-4">
+        <div>
+          <h3 class="text-sm font-semibold text-slate-200">Live Transaction & Fraud Audit Stream</h3>
+          <p class="text-xs text-slate-400">Stream of processed transactions with calculated risk metrics and decision records.</p>
+        </div>
+        <button onclick="clearTransactionStream()" class="text-xs text-slate-500 hover:text-slate-300">Clear Feed</button>
+      </div>
+
+      <div class="overflow-x-auto">
+        <table class="w-full text-left text-xs">
+          <thead class="text-[11px] text-slate-400 uppercase bg-slate-900/60 border-b border-slate-800">
+            <tr>
+              <th class="py-2.5 px-3">Time</th>
+              <th class="py-2.5 px-3">Merchant</th>
+              <th class="py-2.5 px-3">Amount</th>
+              <th class="py-2.5 px-3">Location</th>
+              <th class="py-2.5 px-3">Device / IP</th>
+              <th class="py-2.5 px-3 text-center">Score</th>
+              <th class="py-2.5 px-3">Risk Level</th>
+              <th class="py-2.5 px-3">Decision</th>
+            </tr>
+          </thead>
+          <tbody id="transaction-table-body" class="divide-y divide-slate-800/60 font-mono">
+            <!-- Dynamically populated rows -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- 3D Globe & Application Logic -->
+  <script>
+    // -------------------------------------------------------------
+    // 1. 3D WebGL / Canvas Mathematical Globe Engine
+    // -------------------------------------------------------------
+    const canvas = document.getElementById('globe-canvas');
+    const ctx = canvas.getContext('2d');
+
+    let globeRotationY = 0.5;
+    let globeRotationX = 0.2;
+    let autoRotate = true;
+    let isDragging = false;
+    let previousMousePosition = { x: 0, y: 0 };
+
+    const GLOBE_RADIUS = 135;
+    const GLOBE_CENTER_X = canvas.width / 2;
+    const GLOBE_CENTER_Y = canvas.height / 2;
+
+    // City Coordinates (lat, lon)
+    const CITIES = {
+      NYC: { name: "New York", lat: 40.7128, lon: -74.0060 },
+      LA:  { name: "Los Angeles", lat: 34.0522, lon: -118.2437 },
+      LON: { name: "London", lat: 51.5074, lon: -0.1278 },
+      TOK: { name: "Tokyo", lat: 35.6762, lon: 139.6503 },
+      FRA: { name: "Frankfurt", lat: 50.1109, lon: 8.6821 },
+      SYD: { name: "Sydney", lat: -33.8688, lon: 151.2093 }
+    };
+
+    // Active visual transaction arcs
+    let activeArcs = [];
+    let activeMarkers = [];
+
+    // Background Stars
+    const stars = Array.from({ length: 80 }, () => ({
+      x: Math.random() * canvas.width,
+      y: Math.random() * canvas.height,
+      radius: Math.random() * 1.4 + 0.3,
+      alpha: Math.random() * 0.7 + 0.3
+    }));
+
+    // Math: Convert Lat/Lon to 3D Sphere coordinates
+    function latLonToVector3(lat, lon, radius) {
+      const phi = (90 - lat) * (Math.PI / 180);
+      const theta = (lon + 180) * (Math.PI / 180);
+      return {
+        x: -(radius * Math.sin(phi) * Math.cos(theta)),
+        z: (radius * Math.sin(phi) * Math.sin(theta)),
+        y: (radius * Math.cos(phi))
+      };
+    }
+
+    // Math: Rotate 3D vector around X and Y axes
+    function rotateVector(v, rotX, rotY) {
+      // Rotate around Y
+      const cosY = Math.cos(rotY);
+      const sinY = Math.sin(rotY);
+      const x1 = v.x * cosY + v.z * sinY;
+      const z1 = -v.x * sinY + v.z * cosY;
+      const y1 = v.y;
+
+      // Rotate around X
+      const cosX = Math.cos(rotX);
+      const sinX = Math.sin(rotX);
+      const y2 = y1 * cosX - z1 * sinX;
+      const z2 = y1 * sinX + z1 * cosX;
+
+      return { x: x1, y: y2, z: z2 };
+    }
+
+    // Render 3D Globe Frame
+    function renderGlobe() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      // Render Stars
+      stars.forEach(s => {
+        ctx.fillStyle = `rgba(148, 163, 184, ${s.alpha})`;
+        ctx.beginPath();
+        ctx.arc(s.x, s.y, s.radius, 0, Math.PI * 2);
+        ctx.fill();
+      });
+
+      // Globe Background Atmosphere Glow
+      const glowGrad = ctx.createRadialGradient(
+        GLOBE_CENTER_X, GLOBE_CENTER_Y, GLOBE_RADIUS * 0.85,
+        GLOBE_CENTER_X, GLOBE_CENTER_Y, GLOBE_RADIUS * 1.25
+      );
+      glowGrad.addColorStop(0, 'rgba(6, 182, 212, 0.15)');
+      glowGrad.addColorStop(0.6, 'rgba(59, 130, 246, 0.05)');
+      glowGrad.addColorStop(1, 'transparent');
+      ctx.fillStyle = glowGrad;
+      ctx.beginPath();
+      ctx.arc(GLOBE_CENTER_X, GLOBE_CENTER_Y, GLOBE_RADIUS * 1.25, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Globe Outer Silhouette
+      ctx.strokeStyle = 'rgba(56, 189, 248, 0.4)';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.arc(GLOBE_CENTER_X, GLOBE_CENTER_Y, GLOBE_RADIUS, 0, Math.PI * 2);
+      ctx.stroke();
+
+      // Render Latitude Parallels
+      for (let lat = -60; lat <= 60; lat += 30) {
+        ctx.strokeStyle = 'rgba(51, 65, 85, 0.45)';
+        ctx.lineWidth = 0.8;
+        ctx.beginPath();
+        let first = true;
+        for (let lon = -180; lon <= 180; lon += 10) {
+          const v = latLonToVector3(lat, lon, GLOBE_RADIUS);
+          const r = rotateVector(v, globeRotationX, globeRotationY);
+          if (r.z > 0) { // Visible hemisphere only
+            const px = GLOBE_CENTER_X + r.x;
+            const py = GLOBE_CENTER_Y - r.y;
+            if (first) { ctx.moveTo(px, py); first = false; }
+            else { ctx.lineTo(px, py); }
+          } else {
+            first = true;
+          }
+        }
+        ctx.stroke();
+      }
+
+      // Render Longitude Meridians
+      for (let lon = -180; lon < 180; lon += 30) {
+        ctx.strokeStyle = 'rgba(51, 65, 85, 0.45)';
+        ctx.lineWidth = 0.8;
+        ctx.beginPath();
+        let first = true;
+        for (let lat = -90; lat <= 90; lat += 10) {
+          const v = latLonToVector3(lat, lon, GLOBE_RADIUS);
+          const r = rotateVector(v, globeRotationX, globeRotationY);
+          if (r.z > 0) {
+            const px = GLOBE_CENTER_X + r.x;
+            const py = GLOBE_CENTER_Y - r.y;
+            if (first) { ctx.moveTo(px, py); first = false; }
+            else { ctx.lineTo(px, py); }
+          } else {
+            first = true;
+          }
+        }
+        ctx.stroke();
+      }
+
+      // Render 3D Arcs
+      activeArcs.forEach(arc => {
+        arc.progress = (arc.progress || 0) + 0.015;
+        if (arc.progress > 1) arc.progress = 0;
+
+        const p1 = latLonToVector3(arc.from.lat, arc.from.lon, GLOBE_RADIUS);
+        const p2 = latLonToVector3(arc.to.lat, arc.to.lon, GLOBE_RADIUS);
+
+        ctx.strokeStyle = arc.color || 'rgba(6, 182, 212, 0.7)';
+        ctx.lineWidth = 1.8;
+        ctx.beginPath();
+
+        let prevX, prevY;
+        const steps = 30;
+        for (let i = 0; i <= steps; i++) {
+          const t = i / steps;
+          // Spherical interpolation with altitude bump
+          const x = p1.x * (1 - t) + p2.x * t;
+          const y = p1.y * (1 - t) + p2.y * t;
+          const z = p1.z * (1 - t) + p2.z * t;
+          const altitude = Math.sin(t * Math.PI) * 35;
+
+          const len = Math.sqrt(x*x + y*y + z*z) || 1;
+          const normalized = {
+            x: (x / len) * (GLOBE_RADIUS + altitude),
+            y: (y / len) * (GLOBE_RADIUS + altitude),
+            z: (z / len) * (GLOBE_RADIUS + altitude)
+          };
+
+          const r = rotateVector(normalized, globeRotationX, globeRotationY);
+          if (r.z > -20) {
+            const px = GLOBE_CENTER_X + r.x;
+            const py = GLOBE_CENTER_Y - r.y;
+            if (i === 0) ctx.moveTo(px, py);
+            else ctx.lineTo(px, py);
+
+            // Particle pulse along arc
+            if (Math.abs(t - arc.progress) < 0.04) {
+              prevX = px;
+              prevY = py;
+            }
+          }
+        }
+        ctx.stroke();
+
+        // Draw traveling particle
+        if (prevX && prevY) {
+          ctx.fillStyle = '#ffffff';
+          ctx.beginPath();
+          ctx.arc(prevX, prevY, 3, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      });
+
+      // Render City Nodes
+      Object.entries(CITIES).forEach(([key, city]) => {
+        const v = latLonToVector3(city.lat, city.lon, GLOBE_RADIUS);
+        const r = rotateVector(v, globeRotationX, globeRotationY);
+        if (r.z > 0) {
+          const px = GLOBE_CENTER_X + r.x;
+          const py = GLOBE_CENTER_Y - r.y;
+
+          // Pulsing point
+          ctx.fillStyle = 'rgba(6, 182, 212, 0.9)';
+          ctx.beginPath();
+          ctx.arc(px, py, 3.5, 0, Math.PI * 2);
+          ctx.fill();
+
+          // City Label
+          ctx.fillStyle = 'rgba(203, 213, 225, 0.75)';
+          ctx.font = '10px monospace';
+          ctx.fillText(city.name, px + 6, py + 3);
+        }
+      });
+
+      // Render Temporary Impact Marker Rings
+      activeMarkers = activeMarkers.filter(m => {
+        m.life -= 0.02;
+        const v = latLonToVector3(m.lat, m.lon, GLOBE_RADIUS);
+        const r = rotateVector(v, globeRotationX, globeRotationY);
+        if (r.z > 0 && m.life > 0) {
+          const px = GLOBE_CENTER_X + r.x;
+          const py = GLOBE_CENTER_Y - r.y;
+          ctx.strokeStyle = m.color;
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.arc(px, py, (1 - m.life) * 22, 0, Math.PI * 2);
+          ctx.stroke();
+          return true;
+        }
+        return false;
+      });
+
+      // Auto rotation increment
+      if (autoRotate && !isDragging) {
+        globeRotationY += 0.004;
+      }
+
+      requestAnimationFrame(renderGlobe);
+    }
+
+    // Mouse Interaction for 3D Camera Controls
+    canvas.addEventListener('mousedown', (e) => {
+      isDragging = true;
+      previousMousePosition = { x: e.clientX, y: e.clientY };
+    });
+
+    window.addEventListener('mouseup', () => { isDragging = false; });
+
+    canvas.addEventListener('mousemove', (e) => {
+      if (!isDragging) return;
+      const deltaX = e.clientX - previousMousePosition.x;
+      const deltaY = e.clientY - previousMousePosition.y;
+
+      globeRotationY += deltaX * 0.008;
+      globeRotationX = Math.max(-0.8, Math.min(0.8, globeRotationX + deltaY * 0.008));
+
+      previousMousePosition = { x: e.clientX, y: e.clientY };
+    });
+
+    function resetGlobeView() {
+      globeRotationY = 0.5;
+      globeRotationX = 0.2;
+    }
+
+    function toggleAutoRotate() {
+      autoRotate = !autoRotate;
+      document.getElementById('auto-rotate-btn').textContent = autoRotate ? '⏸ Pause Rotation' : '▶ Resume Rotation';
+    }
+
+    // -------------------------------------------------------------
+    // 2. Risk Engine Evaluator & Client Simulator Fallback
+    // -------------------------------------------------------------
+    let isLiveBackend = true;
+    let jwtToken = null;
+
+    // Client-side rule weights matching backend RiskConfig
+    const CONFIG = {
+      scoring: {
+        largeTxn: 20,
+        frequency: 20,
+        location: 25,
+        newDevice: 15,
+        suspiciousIp: 20,
+        highRiskMerchant: 15,
+        failedTxn: 10
+      },
+      thresholds: {
+        userAvgAmount: 150.00,
+        largeMultiplier: 3.0,
+        suspiciousIps: ["192.168.100.1", "10.0.0.1"]
+      }
+    };
+
+    function evaluateLocalRules(data) {
+      let score = 0;
+      let reasons = [];
+
+      // Rule 1: Large Transaction
+      if (data.amount > CONFIG.thresholds.userAvgAmount * CONFIG.thresholds.largeMultiplier) {
+        score += CONFIG.scoring.largeTxn;
+        reasons.push(`Unusual transaction amount ($${data.amount} exceeds 3.0x average of $${CONFIG.thresholds.userAvgAmount})`);
+      }
+
+      // Rule 3: Location Anomaly
+      if (data.locationKey !== 'NYC') {
+        score += CONFIG.scoring.location;
+        reasons.push(`Suspicious location change (>500 km shift from user baseline NYC)`);
+      }
+
+      // Rule 4: New Device
+      if (data.deviceId === 'device-new-999') {
+        score += CONFIG.scoring.newDevice;
+        reasons.push(`Transaction from a previously unseen device: device-new-999`);
+      }
+
+      // Rule 5: Suspicious IP
+      if (CONFIG.thresholds.suspiciousIps.includes(data.ipAddress)) {
+        score += CONFIG.scoring.suspiciousIp;
+        reasons.push(`Flagged suspicious IP address: ${data.ipAddress}`);
+      }
+
+      // Rule 6: High Risk Merchant
+      if (data.merchant.includes('Crypto') || data.merchant.includes('Casino')) {
+        score += CONFIG.scoring.highRiskMerchant;
+        reasons.push(`Transaction at a high-risk merchant category: ${data.merchant}`);
+      }
+
+      const normalizedScore = Math.min(score, 100);
+      let riskLevel = "LOW";
+      let decision = "APPROVED";
+
+      if (normalizedScore >= 80) {
+        riskLevel = "CRITICAL";
+        decision = "BLOCKED";
+      } else if (normalizedScore >= 60) {
+        riskLevel = "HIGH";
+        decision = "REVIEW";
+      } else if (normalizedScore >= 30) {
+        riskLevel = "MEDIUM";
+        decision = "APPROVED";
+      }
+
+      return {
+        score: normalizedScore,
+        riskLevel: riskLevel,
+        decision: decision,
+        reasons: reasons
+      };
+    }
+
+    // Auto-login to obtain live backend JWT if server is running
+    async function tryConnectBackend() {
+      try {
+        const res = await fetch('/api/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username: 'john_doe', password: 'password' })
+        });
+        if (res.ok) {
+          const json = await res.json();
+          jwtToken = json.token;
+          setBackendStatus(true, 'Live Connected (JWT Issued)');
+          return;
+        }
+      } catch (e) {
+        // Backend not listening on 8080 or CORS error
+      }
+      setBackendStatus(false, 'Simulator Active (Zero Setup)');
+    }
+
+    function setBackendStatus(online, label) {
+      const pill = document.getElementById('backend-status-pill');
+      const text = document.getElementById('backend-status-text');
+      const modeLabel = document.getElementById('current-mode-label');
+
+      if (online) {
+        isLiveBackend = true;
+        pill.className = "flex items-center space-x-2 px-3 py-1 rounded-full bg-emerald-950/80 border border-emerald-500/40 text-xs text-emerald-300 font-mono";
+        text.textContent = label;
+        modeLabel.textContent = "Live Spring Boot";
+        modeLabel.className = "text-emerald-400 font-semibold";
+      } else {
+        isLiveBackend = false;
+        pill.className = "flex items-center space-x-2 px-3 py-1 rounded-full bg-cyan-950/80 border border-cyan-500/40 text-xs text-cyan-300 font-mono";
+        text.textContent = label;
+        modeLabel.textContent = "Client Simulator";
+        modeLabel.className = "text-cyan-400 font-semibold";
+      }
+    }
+
+    function toggleEngineMode() {
+      isLiveBackend = !isLiveBackend;
+      setBackendStatus(isLiveBackend, isLiveBackend ? 'Live Backend (Port 8080)' : 'Client Simulator (Zero Setup)');
+    }
+
+    // Submit and evaluate
+    async function processTransaction(txData) {
+      let result;
+
+      // Try Live Backend first if configured
+      if (isLiveBackend && jwtToken) {
+        try {
+          const payload = {
+            amount: txData.amount,
+            currency: 'USD',
+            merchant: txData.merchant,
+            transactionType: 'PURCHASE',
+            deviceId: txData.deviceId,
+            location: txData.locationName,
+            latitude: txData.coords.lat,
+            longitude: txData.coords.lon,
+            ipAddress: txData.ipAddress
+          };
+
+          const res = await fetch('/api/transactions', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${jwtToken}`
+            },
+            body: JSON.stringify(payload)
+          });
+
+          if (res.ok) {
+            const resJson = await res.json();
+            // Fetch reasons breakdown
+            const riskRes = await fetch(`/api/risk/transaction/${resJson.id}`, {
+              headers: { 'Authorization': `Bearer ${jwtToken}` }
+            });
+            const riskJson = riskRes.ok ? await riskRes.json() : { reasons: [] };
+
+            result = {
+              score: resJson.riskScore,
+              riskLevel: resJson.riskLevel,
+              decision: resJson.status,
+              reasons: riskJson.reasons || []
+            };
+          }
+        } catch (err) {
+          console.warn("Backend request failed, falling back to instant simulator", err);
+        }
+      }
+
+      if (!result) {
+        result = evaluateLocalRules(txData);
+      }
+
+      // Update UI Inspector
+      updateRiskInspector(result);
+
+      // Trigger 3D Arc & Marker
+      trigger3dEffect(txData, result.riskLevel);
+
+      // Add to Table Stream
+      addTableRow(txData, result);
+
+      // Update Counter Metrics
+      updateMetrics(result.riskLevel);
+    }
+
+    // Update 3D Visual Effects on Globe
+    function trigger3dEffect(txData, riskLevel) {
+      const colors = {
+        LOW: '#10b981',      // Emerald
+        MEDIUM: '#f59e0b',   // Amber
+        HIGH: '#f97316',     // Orange
+        CRITICAL: '#f43f5e'  // Rose
+      };
+      const color = colors[riskLevel] || '#06b6d4';
+
+      // Animate 3D arc from NYC (baseline) to destination
+      activeArcs = [{
+        from: CITIES.NYC,
+        to: txData.coords,
+        color: color,
+        progress: 0
+      }];
+
+      // Impact Marker
+      activeMarkers.push({
+        lat: txData.coords.lat,
+        lon: txData.coords.lon,
+        color: color,
+        life: 1.0
+      });
+
+      // Show alert badge
+      const badge = document.getElementById('globe-alert-badge');
+      const title = document.getElementById('globe-alert-title');
+      const desc = document.getElementById('globe-alert-desc');
+      badge.classList.remove('hidden');
+      title.textContent = `${riskLevel} RISK [${txData.merchant}]`;
+      title.style.color = color;
+      desc.textContent = `$${txData.amount.toFixed(2)} • ${txData.locationName}`;
+
+      setTimeout(() => { badge.classList.add('hidden'); }, 4000);
+    }
+
+    // Update Risk Inspector
+    function updateRiskInspector(result) {
+      const scoreText = document.getElementById('score-text');
+      const decisionText = document.getElementById('decision-text');
+      const decisionDesc = document.getElementById('decision-desc');
+      const levelBadge = document.getElementById('risk-level-badge');
+      const gaugeCircle = document.getElementById('gauge-circle');
+      const rulesContainer = document.getElementById('rules-container');
+      const ruleCount = document.getElementById('rule-count');
+
+      scoreText.textContent = result.score;
+      decisionText.textContent = result.decision;
+
+      // Gauge animation
+      const offset = 251.2 - (251.2 * result.score) / 100;
+      gaugeCircle.style.strokeDashoffset = offset;
+
+      const styles = {
+        LOW: {
+          color: 'text-emerald-400',
+          badgeClass: 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40',
+          desc: 'Transaction accepted within normal tolerances.'
+        },
+        MEDIUM: {
+          color: 'text-amber-400',
+          badgeClass: 'bg-amber-500/20 text-amber-400 border-amber-500/40',
+          desc: 'Mild anomaly flagged, automatic approval permitted.'
+        },
+        HIGH: {
+          color: 'text-orange-400',
+          badgeClass: 'bg-orange-500/20 text-orange-400 border-orange-500/40',
+          desc: 'Multiple risk factors detected; queued for analyst review.'
+        },
+        CRITICAL: {
+          color: 'text-rose-400',
+          badgeClass: 'bg-rose-500/20 text-rose-400 border-rose-500/40',
+          desc: 'High-probability fraud attempt blocked instantly.'
+        }
+      };
+
+      const currentStyle = styles[result.riskLevel] || styles.LOW;
+      decisionText.className = `text-xl font-bold font-mono tracking-wide ${currentStyle.color}`;
+      decisionDesc.textContent = currentStyle.desc;
+      levelBadge.className = `px-2.5 py-0.5 rounded-full text-xs font-bold font-mono border ${currentStyle.badgeClass}`;
+      levelBadge.textContent = `${result.riskLevel} RISK`;
+      gaugeCircle.setAttribute('class', `${currentStyle.color} transition-all duration-700`);
+
+      // Triggered Rules
+      ruleCount.textContent = result.reasons.length;
+      if (result.reasons.length === 0) {
+        rulesContainer.innerHTML = `<div class="text-slate-500 italic py-2 text-center text-xs">No fraud rules triggered. Clean transaction.</div>`;
+      } else {
+        rulesContainer.innerHTML = result.reasons.map(r => `
+          <div class="flex items-start space-x-2 bg-slate-900/80 p-2 rounded-lg border border-slate-800">
+            <span class="text-rose-400 font-bold shrink-0">⚠</span>
+            <span class="text-slate-300">${r}</span>
+          </div>
+        `).join('');
+      }
+    }
+
+    // Add row to stream table
+    function addTableRow(txData, result) {
+      const tbody = document.getElementById('transaction-table-body');
+      const now = new Date().toLocaleTimeString();
+
+      const levelColor = {
+        LOW: 'text-emerald-400',
+        MEDIUM: 'text-amber-400',
+        HIGH: 'text-orange-400',
+        CRITICAL: 'text-rose-400'
+      }[result.riskLevel];
+
+      const row = document.createElement('tr');
+      row.className = "hover:bg-slate-900/40 transition-colors";
+      row.innerHTML = `
+        <td class="py-2.5 px-3 text-slate-400">${now}</td>
+        <td class="py-2.5 px-3 font-semibold text-slate-200">${txData.merchant}</td>
+        <td class="py-2.5 px-3 text-white font-bold">$${txData.amount.toFixed(2)}</td>
+        <td class="py-2.5 px-3 text-slate-400">${txData.locationName}</td>
+        <td class="py-2.5 px-3 text-slate-500">${txData.deviceId} / ${txData.ipAddress}</td>
+        <td class="py-2.5 px-3 text-center font-bold text-white">${result.score}</td>
+        <td class="py-2.5 px-3 ${levelColor} font-bold">${result.riskLevel}</td>
+        <td class="py-2.5 px-3 font-bold ${levelColor}">${result.decision}</td>
+      `;
+      tbody.prepend(row);
+
+      // Keep maximum 15 rows
+      if (tbody.children.length > 15) {
+        tbody.removeChild(tbody.lastChild);
+      }
+    }
+
+    function clearTransactionStream() {
+      document.getElementById('transaction-table-body').innerHTML = '';
+    }
+
+    // Metric Counters Increment
+    let totals = { total: 1248, approved: 1182, review: 48, blocked: 18 };
+    function updateMetrics(riskLevel) {
+      totals.total++;
+      if (riskLevel === 'LOW' || riskLevel === 'MEDIUM') totals.approved++;
+      if (riskLevel === 'HIGH') totals.review++;
+      if (riskLevel === 'CRITICAL') totals.blocked++;
+
+      document.getElementById('metric-total').textContent = totals.total.toLocaleString();
+      document.getElementById('metric-approved').textContent = totals.approved.toLocaleString();
+      document.getElementById('metric-review').textContent = totals.review.toLocaleString();
+      document.getElementById('metric-blocked').textContent = totals.blocked.toLocaleString();
+    }
+
+    // Inject Demo Presets
+    function injectPreset(type) {
+      if (type === 'low') {
+        processTransaction({
+          amount: 45.00,
+          merchant: 'Amazon',
+          locationKey: 'NYC',
+          locationName: 'New York, NY',
+          coords: CITIES.NYC,
+          deviceId: 'device-known-001',
+          ipAddress: '192.168.1.15'
+        });
+      } else if (type === 'medium') {
+        processTransaction({
+          amount: 280.00,
+          merchant: 'TechStore Pro',
+          locationKey: 'NYC',
+          locationName: 'New York, NY',
+          coords: CITIES.NYC,
+          deviceId: 'device-new-999',
+          ipAddress: '192.168.1.15'
+        });
+      } else if (type === 'high') {
+        processTransaction({
+          amount: 2500.00,
+          merchant: 'Crypto Exchange XYZ',
+          locationKey: 'LA',
+          locationName: 'Los Angeles, CA',
+          coords: CITIES.LA,
+          deviceId: 'device-new-999',
+          ipAddress: '192.168.1.15'
+        });
+      } else if (type === 'critical') {
+        processTransaction({
+          amount: 9500.00,
+          merchant: 'Online Casino Royal',
+          locationKey: 'LON',
+          locationName: 'London, UK',
+          coords: CITIES.LON,
+          deviceId: 'device-new-999',
+          ipAddress: '192.168.100.1'
+        });
+      }
+    }
+
+    // Custom Form Handler
+    function submitCustomTransaction(e) {
+      e.preventDefault();
+      const amount = parseFloat(document.getElementById('input-amount').value);
+      const merchant = document.getElementById('input-merchant').value;
+      const locationKey = document.getElementById('input-location').value;
+      const deviceId = document.getElementById('input-device').value;
+      const ipAddress = document.getElementById('input-ip').value;
+
+      const locDetails = {
+        NYC: { name: 'New York, NY', coords: CITIES.NYC },
+        LA:  { name: 'Los Angeles, CA', coords: CITIES.LA },
+        LON: { name: 'London, UK', coords: CITIES.LON },
+        TOK: { name: 'Tokyo, Japan', coords: CITIES.TOK }
+      }[locationKey];
+
+      processTransaction({
+        amount: amount,
+        merchant: merchant,
+        locationKey: locationKey,
+        locationName: locDetails.name,
+        coords: locDetails.coords,
+        deviceId: deviceId,
+        ipAddress: ipAddress
+      });
+    }
+
+    // Boot system
+    window.addEventListener('DOMContentLoaded', () => {
+      renderGlobe();
+      tryConnectBackend();
+      // Inject baseline demonstration transaction
+      injectPreset('low');
+    });
+  </script>
+</body>
+</html>
