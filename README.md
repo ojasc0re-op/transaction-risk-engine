@@ -389,10 +389,6 @@ mvn clean package -DskipTests
 java -jar target/fraud-detection-platform-1.0.0.jar
 ```
 
-Access Swagger UI at: [http://localhost:8080/swagger-ui.html](http://localhost:8080/swagger-ui.html)  
-OpenAPI Specification at: [http://localhost:8080/api-docs](http://localhost:8080/api-docs)
-
----
 
 ## 10. Docker & Docker Compose
 
@@ -467,27 +463,6 @@ The `.github/workflows/ci.yml` pipeline triggers on every push and pull request 
 
 ---
 
-## 15. Publishing to GitHub
-
-To push this repository to GitHub:
-
-```bash
-cd C:\Users\ojasg\.gemini\antigravity\scratch\fraud-detection-platform
-
-# Initialize git repository
-git init
-
-# Add files
-git add .
-
-# Commit
-git commit -m "feat: initial commit of Transaction Risk & Fraud Detection Platform"
-
-# Link remote and push
-git branch -M main
-git remote add origin https://github.com/<your-username>/fraud-detection-platform.git
-git push -u origin main
-```
 
 ---
 
